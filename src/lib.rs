@@ -2,11 +2,11 @@ use std::mem;
 
 #[allow(dead_code)]
 pub struct Config {
-	buffer_initial_size: usize,
-	max_nesting: usize,
-	max_data: usize,
-	allow_c_comments: bool,
-	allow_yaml_comments: bool
+    buffer_initial_size: usize,
+    max_nesting: usize,
+    max_data: usize,
+    allow_c_comments: bool,
+    allow_yaml_comments: bool
 }
 
 type JResult<T> = Result<T, JError>;
@@ -30,60 +30,60 @@ pub enum Jev {
 
 #[allow(non_camel_case_types)]
 pub enum JError {
-	/* SUCCESS = 0 */
-	/* running out of memory */
-	NO_MEMORY = 1,
-	/* character < 32, except space newline tab */
-	BAD_CHAR,
-	/* trying to pop more object/array than pushed on the stack */
-	POP_EMPTY,
-	/* trying to pop wrong type of mode. popping array in object mode, vice versa */
-	POP_UNEXPECTED_MODE,
-	/* reach nesting limit on stack */
-	NESTING_LIMIT,
-	/* reach data limit on buffer */
-	DATA_LIMIT,
-	/* comment are not allowed with current configuration */
-	COMMENT_NOT_ALLOWED,
-	/* unexpected char in the current parser context */
-	UNEXPECTED_CHAR,
-	/* unicode low surrogate missing after high surrogate */
-	UNICODE_MISSING_LOW_SURROGATE,
-	/* unicode low surrogate missing without previous high surrogate */
-	UNICODE_UNEXPECTED_LOW_SURROGATE,
-	/* found a comma not in structure (array/object) */
-	COMMA_OUT_OF_STRUCTURE,
-	/* callback returns error */
-	CALLBACK,
-	/* utf8 stream is invalid */
-	UTF8,
+    /* SUCCESS = 0 */
+    /* running out of memory */
+    NO_MEMORY = 1,
+    /* character < 32, except space newline tab */
+    BAD_CHAR,
+    /* trying to pop more object/array than pushed on the stack */
+    POP_EMPTY,
+    /* trying to pop wrong type of mode. popping array in object mode, vice versa */
+    POP_UNEXPECTED_MODE,
+    /* reach nesting limit on stack */
+    NESTING_LIMIT,
+    /* reach data limit on buffer */
+    DATA_LIMIT,
+    /* comment are not allowed with current configuration */
+    COMMENT_NOT_ALLOWED,
+    /* unexpected char in the current parser context */
+    UNEXPECTED_CHAR,
+    /* unicode low surrogate missing after high surrogate */
+    UNICODE_MISSING_LOW_SURROGATE,
+    /* unicode low surrogate missing without previous high surrogate */
+    UNICODE_UNEXPECTED_LOW_SURROGATE,
+    /* found a comma not in structure (array/object) */
+    COMMA_OUT_OF_STRUCTURE,
+    /* callback returns error */
+    CALLBACK,
+    /* utf8 stream is invalid */
+    UTF8,
 }
 
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 enum C {
-	Space, // space
-	Nl,    // newline
-	White, // tab, R
-	Lcurb, Rcurb, // object opening/closing
-	Lsqrb, Rsqrb, // array opening/closing
-	// syntax symbols
-	Colon,
-	Comma,
-	Quote, // "
-	Backs, // \
-	Slash, // /
-	Plus,
-	Minus,
-	Dot,
-	Zero, Digit, // digits
-	a, b, c, d, e, f, l, n, r, s, t, u, // nocaps letters
-	Abcdf, E, // caps letters
-	Other, // all other
-	Star, // star in C style comment
-	Hash, // # for YAML comment
-	Error = 0xfe,
+    Space, // space
+    Nl,    // newline
+    White, // tab, R
+    Lcurb, Rcurb, // object opening/closing
+    Lsqrb, Rsqrb, // array opening/closing
+    // syntax symbols
+    Colon,
+    Comma,
+    Quote, // "
+    Backs, // \
+    Slash, // /
+    Plus,
+    Minus,
+    Dot,
+    Zero, Digit, // digits
+    a, b, c, d, e, f, l, n, r, s, t, u, // nocaps letters
+    Abcdf, E, // caps letters
+    Other, // all other
+    Star, // star in C style comment
+    Hash, // # for YAML comment
+    Error = 0xfe,
 }
 
 /// define all states and actions that will be taken on each transition.
@@ -98,45 +98,45 @@ enum C {
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 enum S {
-	GO, // start
-	OK, // ok
-	_O, // object
-	_K, // key
-	CO, // colon
-	_V, // value
-	_A, // array
-	_S, // string
-	E0, // escape
-	U1, U2, U3, U4, // unicode states
-	M0, Z0, I0, // number states
-	R1, R2, // real states (after-dot digits)
-	X1, X2, X3, // exponant states
-	T1, T2, T3, // true constant states
-	F1, F2, F3, F4, // false constant states
-	N1, N2, N3, // null constant states
-	C1, C2, C3, // C-comment states
-	Y1, // YAML-comment state
-	D1, D2, // multi unicode states
+    GO, // start
+    OK, // ok
+    _O, // object
+    _K, // key
+    CO, // colon
+    _V, // value
+    _A, // array
+    _S, // string
+    E0, // escape
+    U1, U2, U3, U4, // unicode states
+    M0, Z0, I0, // number states
+    R1, R2, // real states (after-dot digits)
+    X1, X2, X3, // exponant states
+    T1, T2, T3, // true constant states
+    F1, F2, F3, F4, // false constant states
+    N1, N2, N3, // null constant states
+    C1, C2, C3, // C-comment states
+    Y1, // YAML-comment state
+    D1, D2, // multi unicode states
     // the following are actions that need to be taken
-	KS = 0x80, // key separator
-	SP, // comma separator
-	AB, // array begin
-	AE, // array ending
-	OB, // object begin
-	OE, // object end
-	CB, // C-comment begin
-	YB, // YAML-comment begin
-	CE, // YAML/C comment end
-	FA, // false
-	TR, // true
-	NU, // null
-	DE, // double detected by exponent
-	DF, // double detected by .
-	SE, // string end
-	MX, // integer detected by minus
-	ZX, // integer detected by zero
-	IX, // integer detected by 1-9
-	UC, // Unicode character read
+    KS = 0x80, // key separator
+    SP, // comma separator
+    AB, // array begin
+    AE, // array ending
+    OB, // object begin
+    OE, // object end
+    CB, // C-comment begin
+    YB, // YAML-comment begin
+    CE, // YAML/C comment end
+    FA, // false
+    TR, // true
+    NU, // null
+    DE, // double detected by exponent
+    DF, // double detected by .
+    SE, // string end
+    MX, // integer detected by minus
+    ZX, // integer detected by zero
+    IX, // integer detected by 1-9
+    UC, // Unicode character read
     __ = 0xff
 }
 
@@ -152,40 +152,40 @@ const NR_STATES : usize = 37;
 /* map from character < 128 to classes. from 128 to 256 all C_OTHER */
 const CHARACTER_CLASS : [C;128] = [
     // 0 to 31
-	C::Error, C::Error, C::Error, C::Error,
     C::Error, C::Error, C::Error, C::Error,
-	C::Error, C::White, C::Nl,    C::Error,
+    C::Error, C::Error, C::Error, C::Error,
+    C::Error, C::White, C::Nl,    C::Error,
     C::Error, C::White, C::Error, C::Error,
-	C::Error, C::Error, C::Error, C::Error,
     C::Error, C::Error, C::Error, C::Error,
-	C::Error, C::Error, C::Error, C::Error,
+    C::Error, C::Error, C::Error, C::Error,
+    C::Error, C::Error, C::Error, C::Error,
     C::Error, C::Error, C::Error, C::Error,
     // 32 to 63
-	C::Space, C::Other, C::Quote, C::Hash,
+    C::Space, C::Other, C::Quote, C::Hash,
     C::Other, C::Other, C::Other, C::Other,
-	C::Other, C::Other, C::Star,  C::Plus,
+    C::Other, C::Other, C::Star,  C::Plus,
     C::Comma, C::Minus, C::Dot,   C::Slash,
-	C::Zero,  C::Digit, C::Digit, C::Digit,
+    C::Zero,  C::Digit, C::Digit, C::Digit,
     C::Digit, C::Digit, C::Digit, C::Digit,
-	C::Digit, C::Digit, C::Colon, C::Other,
+    C::Digit, C::Digit, C::Colon, C::Other,
     C::Other, C::Other, C::Other, C::Other,
     // 64 to 95
-	C::Other, C::Abcdf, C::Abcdf, C::Abcdf,
+    C::Other, C::Abcdf, C::Abcdf, C::Abcdf,
     C::Abcdf, C::E,     C::Abcdf, C::Other,
-	C::Other, C::Other, C::Other, C::Other,
     C::Other, C::Other, C::Other, C::Other,
-	C::Other, C::Other, C::Other, C::Other,
     C::Other, C::Other, C::Other, C::Other,
-	C::Other, C::Other, C::Other, C::Lsqrb,
+    C::Other, C::Other, C::Other, C::Other,
+    C::Other, C::Other, C::Other, C::Other,
+    C::Other, C::Other, C::Other, C::Lsqrb,
     C::Backs, C::Rsqrb, C::Other, C::Other,
     // 96 to 127
-	C::Other, C::a,     C::b,     C::c,
+    C::Other, C::a,     C::b,     C::c,
     C::d,     C::e,     C::f,     C::Other,
-	C::Other, C::Other, C::Other, C::Other,
+    C::Other, C::Other, C::Other, C::Other,
     C::l,     C::Other, C::n,     C::Other,
-	C::Other, C::Other, C::r,     C::s,
+    C::Other, C::Other, C::r,     C::s,
     C::t,     C::u,     C::Other, C::Other,
-	C::Other, C::Other, C::Other, C::Lcurb,
+    C::Other, C::Other, C::Other, C::Lcurb,
     C::Other, C::Rcurb, C::Other, C::Other
 ];
 
@@ -329,14 +329,14 @@ const UTF8_CONTINUATION_TABLE : [u8;256] =
 ];
 
 const HEXTABLE : [u32; 128] = [
-	255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
-	255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
-	255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
-	  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,255,255,255,255,255,255,
-	255, 10, 11, 12, 13, 14, 15,255,255,255,255,255,255,255,255,255,
-	255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
-	255, 10, 11, 12, 13, 14, 15,255,255,255,255,255,255,255,255,255,
-	255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
+    255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
+    255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
+    255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
+      0,  1,  2,  3,  4,  5,  6,  7,  8,  9,255,255,255,255,255,255,
+    255, 10, 11, 12, 13, 14, 15,255,255,255,255,255,255,255,255,255,
+    255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
+    255, 10, 11, 12, 13, 14, 15,255,255,255,255,255,255,255,255,255,
+    255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
     ];
 
 fn is_high_surrogate(uc: u32) -> bool { (uc & 0xfc00) == 0xd800 }
@@ -356,8 +356,8 @@ pub struct Parser {
     state: S,
     save_state: S,
     expecting_key: bool,
-	utf8_multibyte_left: u8,
-	unicode_multi: u32,
+    utf8_multibyte_left: u8,
+    unicode_multi: u32,
     stack: Vec<StackMode>,
     //stack_size: usize,
     jtype: Option<Jev>,
@@ -389,12 +389,12 @@ fn state_pop(parser: &mut Parser, mode: StackMode) -> JResult0 {
     match parser.stack.pop() {
         None    => Err(JError::POP_EMPTY),
         Some(m) =>
-	        if m == mode { Ok (()) } else { Err(JError::POP_UNEXPECTED_MODE) }
+            if m == mode { Ok (()) } else { Err(JError::POP_UNEXPECTED_MODE) }
     }
 }
 
 fn buffer_push(parser: &mut Parser, c: u8) -> JResult0 {
-	if parser.buffer.len() >= parser.buffer_size {
+    if parser.buffer.len() >= parser.buffer_size {
         Err(JError::DATA_LIMIT)
     } else {
         parser.buffer.push(c);
@@ -403,7 +403,7 @@ fn buffer_push(parser: &mut Parser, c: u8) -> JResult0 {
 }
 
 fn buffer_push_escape(parser: &mut Parser, next: u8) -> JResult0 {
-	let c =
+    let c =
         match next {
             0x62 /* 'b' */  => 0x7,
             0x66 /* 'f' */  => 0xc,
@@ -415,7 +415,7 @@ fn buffer_push_escape(parser: &mut Parser, next: u8) -> JResult0 {
             0x5c /* '\\' */ => 0x5c,
             _               => 0
         };
-	buffer_push(parser, c)
+    buffer_push(parser, c)
 }
 
 fn do_callback_withbuf(parser: &mut Parser, cb: &Callback, ty: Jev) -> JResult0 {
@@ -457,7 +457,7 @@ fn update_simple(parser: &mut Parser, ty: Option<Jev>, nst: S) -> JResult0 {
 fn update_callbk<F>(parser: &mut Parser, cb: &Callback, ty: Option<Jev>, nst: S, dobuf: bool, per_ty_cb: F) -> JResult0
     where F : Fn(&mut Parser) -> JResult0 {
     if dobuf {
-	    try!(do_buffer(parser, cb));
+        try!(do_buffer(parser, cb));
     }
     try!(per_ty_cb(parser));
     match nst {
@@ -478,10 +478,10 @@ fn decode_unicode_char(parser: &mut Parser) -> JResult0 {
 
     parser.buffer.truncate(offset - 4);
     
-	if parser.unicode_multi > 0 && uval < 0x80 {
+    if parser.unicode_multi > 0 && uval < 0x80 {
         parser.buffer.push(uval as u8);
         return Ok(())
-	}
+    }
 
     if parser.unicode_multi > 0 {
         if !is_low_surrogate(uval) {
@@ -519,71 +519,71 @@ fn decode_unicode_char(parser: &mut Parser) -> JResult0 {
 
 // ********************************************************************** 
 fn act_uc(parser: &mut Parser) -> JResult0 {
-	try!(decode_unicode_char(parser));
-	parser.state = if parser.unicode_multi > 0 { S::D1 } else { S::_S };
+    try!(decode_unicode_char(parser));
+    parser.state = if parser.unicode_multi > 0 { S::D1 } else { S::_S };
     Ok(())
 }
 
 fn act_yb(parser: &mut Parser) -> JResult0 {
-	if !parser.config.allow_yaml_comments {
-		Err(JError::COMMENT_NOT_ALLOWED)
+    if !parser.config.allow_yaml_comments {
+        Err(JError::COMMENT_NOT_ALLOWED)
     } else {
-	    parser.save_state = parser.state;
-	    Ok(())
+        parser.save_state = parser.state;
+        Ok(())
     }
 }
 
 fn act_cb(parser: &mut Parser) -> JResult0 {
-	if !parser.config.allow_c_comments {
-		Err(JError::COMMENT_NOT_ALLOWED)
+    if !parser.config.allow_c_comments {
+        Err(JError::COMMENT_NOT_ALLOWED)
     } else {
-    	parser.save_state = parser.state;
-	    Ok(())
+        parser.save_state = parser.state;
+        Ok(())
     }
 }
 
 fn act_ce(parser: &mut Parser) -> JResult0 {
-	parser.state = if is_state_above_array(parser.save_state) { S::OK } else { parser.save_state };
-	Ok(())
+    parser.state = if is_state_above_array(parser.save_state) { S::OK } else { parser.save_state };
+    Ok(())
 }
 
 fn act_ob(parser: &mut Parser, cb: &Callback) -> JResult0 {
-	try!(do_callback(parser, cb, Jev::ObjectStart));
-	state_push(parser, StackMode::Object);
-	parser.expecting_key = true;
+    try!(do_callback(parser, cb, Jev::ObjectStart));
+    state_push(parser, StackMode::Object);
+    parser.expecting_key = true;
     Ok(())
 }
 
 fn act_oe(parser: &mut Parser, cb: &Callback) -> JResult0 {
-	try!(state_pop(parser, StackMode::Object));
-	try!(do_callback(parser, cb, Jev::ObjectEnd));
-	parser.expecting_key = false;
-	Ok(())
+    try!(state_pop(parser, StackMode::Object));
+    try!(do_callback(parser, cb, Jev::ObjectEnd));
+    parser.expecting_key = false;
+    Ok(())
 }
 
 fn act_ab(parser: &mut Parser, cb: &Callback) -> JResult0 {
-	try!(do_callback(parser, cb, Jev::ArrayStart));
-	state_push(parser, StackMode::Array);
-	Ok(())
+    try!(do_callback(parser, cb, Jev::ArrayStart));
+    state_push(parser, StackMode::Array);
+    Ok(())
 }
 
 fn act_ae(parser: &mut Parser, cb: &Callback) -> JResult0 {
-	try!(state_pop(parser, StackMode::Array));
-	do_callback(parser, cb, Jev::ArrayEnd)
+    try!(state_pop(parser, StackMode::Array));
+    do_callback(parser, cb, Jev::ArrayEnd)
 }
 
 fn act_se(parser: &mut Parser, cb : &Callback) -> JResult0 {
     let ty = if parser.expecting_key { Jev::Key } else { Jev::String };
-	try!(do_callback_withbuf(parser, cb, ty));
+    try!(do_callback_withbuf(parser, cb, ty));
     parser.buffer.clear();
-	parser.state = if parser.expecting_key { S::CO } else { S::OK };
-	parser.expecting_key = false;
-	Ok(())
+    parser.state = if parser.expecting_key { S::CO } else { S::OK };
+    parser.expecting_key = false;
+    Ok(())
 }
 
 fn act_sp(parser: &mut Parser) -> JResult0 {
-	if parser.stack.len() == 0 {
-		Err(JError::COMMA_OUT_OF_STRUCTURE)
+    if parser.stack.len() == 0 {
+        Err(JError::COMMA_OUT_OF_STRUCTURE)
     } else {
         parser.state =
             if parser.stack[parser.stack.len() - 1] == StackMode::Object {
