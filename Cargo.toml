@@ -1,0 +1,4 @@
+[package]
+name = "json-events"
+version = "0.1.0"
+authors = ["Vincent Hanquez <vincent@snarc.org>"]
