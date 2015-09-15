@@ -1,4 +1,6 @@
 use std::mem;
+use std::io::Read;
+use std::io;
 
 #[allow(dead_code)]
 pub struct Config {
@@ -32,7 +34,7 @@ pub enum Jev {
 pub enum JError {
     /* SUCCESS = 0 */
     /* running out of memory */
-    NO_MEMORY = 1,
+    NO_MEMORY,
     /* character < 32, except space newline tab */
     BAD_CHAR,
     /* trying to pop more object/array than pushed on the stack */
@@ -57,6 +59,7 @@ pub enum JError {
     CALLBACK,
     /* utf8 stream is invalid */
     UTF8,
+    IOERR(io::Error),
 }
 
 #[repr(u8)]
@@ -645,37 +648,47 @@ fn get_next_class(parser : &mut Parser, ch : u8) -> JResult<C> {
     }
 }
 
-pub fn parse(mut parser: Parser, cb: &Callback) -> Result<(),JError> {
-    let ch : u8 = 1;
+pub fn parse_data(mut parser: Parser, cb: &Callback, inp: &mut [u8]) -> Result<(),JError> {
+    for i in 0..inp.len() {
+        let ch = inp[i];
 
-    let next_class = try!(get_next_class(&mut parser, ch));
+        let next_class = try!(get_next_class(&mut parser, ch));
 
-    let next_class_num : u8 = unsafe { mem::transmute(next_class) };
-    let parser_state_num : u8 = unsafe { mem::transmute(parser.state) };
-    let next_state = STATE_TRANS[parser_state_num as usize][next_class_num as usize];
+        let next_class_num : u8 = unsafe { mem::transmute(next_class) };
+        let parser_state_num : u8 = unsafe { mem::transmute(parser.state) };
+        let next_state = STATE_TRANS[parser_state_num as usize][next_class_num as usize];
 
-    let buffer_policy = BUFFER_POLICY_TABLE[parser_state_num as usize][next_class_num as usize];
-    if next_state == S::__ {
-        return Err(JError::UNEXPECTED_CHAR);
-    }
+        let buffer_policy = BUFFER_POLICY_TABLE[parser_state_num as usize][next_class_num as usize];
+        if next_state == S::__ {
+            return Err(JError::UNEXPECTED_CHAR);
+        }
 
-    // add char to buffer
-    if buffer_policy > 0 {
-        if buffer_policy > 2 {
-            try!(buffer_push_escape(&mut parser, ch))
+        // add char to buffer
+        if buffer_policy > 0 {
+            if buffer_policy > 2 {
+                try!(buffer_push_escape(&mut parser, ch))
+            } else {
+                try!(buffer_push(&mut parser, ch))
+            }
+        }
+
+        // move to the next level
+        let next_state_num : u8 = unsafe { mem::transmute(next_state) };
+        if (next_state_num & 0x80) != 0 {
+            try!(do_action(&mut parser, cb, next_state))
         } else {
-            try!(buffer_push(&mut parser, ch))
+            parser.state = next_state
         }
     }
-
-    // move to the next level
-    let next_state_num : u8 = unsafe { mem::transmute(next_state) };
-    if (next_state_num & 0x80) != 0 {
-        try!(do_action(&mut parser, cb, next_state))
-    } else {
-        parser.state = next_state;
-    }
     Ok(())
+}
+
+pub fn parse_buf<T: Read>(mut parser: Parser, cb: &Callback, inp: &mut T) -> Result<(),JError> {
+    let inputbuf = &mut [];
+    match inp.read(inputbuf) {
+        Err(e) => Err(JError::IOERR(e)),
+        Ok(n)  => parse_data(parser, cb, inputbuf),
+    }
 }
 
 #[test]
